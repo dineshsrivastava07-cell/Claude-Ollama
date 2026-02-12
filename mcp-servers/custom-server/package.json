@@ -1,0 +1,16 @@
+{
+  "name": "custom-mcp-server",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Custom MCP server for Claude Code",
+  "main": "index.js",
+  "bin": {
+    "custom-mcp-server": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "latest"
+  }
+}
