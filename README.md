@@ -6,9 +6,11 @@ Complete automation framework for Mac Mini (dsr-ai-lab) that integrates Claude C
 
 ## ✨ Features
 
-### 🤖 Dual AI System
-- **Claude Code** (Cloud): Opus 4.5, Sonnet 4.5, Haiku 4.5, and earlier models
-- **Ollama** (Local): Qwen 2.5 Coder, Llama 3.1, Phi 3.5, Gemma, Mistral
+### 🤖 3-Tier AI Routing System
+- **Tier 1 — Qwen 2.5 Coder 7B** (Local): Default for all tasks — fast, free, private
+- **Tier 2 — Qwen 3 Coder 480B** (Cloud via Ollama): Escalation for complex tasks — near Opus-level reasoning
+- **Tier 3 — Claude Opus/Sonnet** (Cloud): Last resort — only with explicit user approval
+- **Also available** (Local): Llama 3.1, Phi 3.5, Gemma, Mistral
 
 ### 🚀 Automation Capabilities
 - **Code Review**: Automated comprehensive code analysis
@@ -147,66 +149,83 @@ co-help          # Show help
 
 ## 🎯 Workflow Examples
 
-### Example 1: Full Development Workflow
+### Example 1: Full Development Workflow (3-Tier)
 
 ```bash
-# 1. Design with Claude Opus (complex reasoning)
-cc-opus
-# "Design architecture for a REST API with authentication"
-
-# 2. Implement with Qwen Coder (local, fast)
+# 1. Scaffold with Tier 1 (Qwen 7B — local, fast)
 ol-qwen
-# "Implement the authentication endpoints"
+# "Generate a FastAPI project structure with auth endpoints"
 
-# 3. Review with automation
+# 2. Complex architecture — escalate to Tier 2 (Qwen 480B)
+# Route via Ollama API: model=qwen3-coder:480b-cloud
+# "Design the auth middleware, JWT flow, and RBAC system"
+
+# 3. Review & document with Tier 1
 code-review ~/projects/api
-
-# 4. Document
 gen-docs ~/projects/api
+
+# 4. Only if Qwen can't handle it → Tier 3 (Claude, with approval)
+cc-opus  # Rare — deep security audit, advanced multi-step reasoning
 ```
 
-### Example 2: Quick Bug Fix
+### Example 2: Quick Bug Fix (Tier 1 Only)
 
 ```bash
-# Analyze with Claude Sonnet
-cc-sonnet
-# Paste error and code
-
-# Fix locally with Qwen
+# Analyze and fix with Qwen 7B
 ol-qwen
-# Apply suggested fix
+# Paste error and code — Qwen handles most bug fixes
 
 # Test
 pytest
 ```
 
-### Example 3: Learning
+### Example 3: Complex Module Build (Tier 1 → Tier 2)
 
 ```bash
-# Learn concept with Claude Opus
-cc-opus
-# "Explain async/await in Python with examples"
-
-# Practice with local model
+# Start with Tier 1 — scaffold files
 ol-qwen
-# "Generate practice exercises"
+# "Generate signal extraction engine with event consumers"
 
-# Review implementation
-code-review my_async_code.py
+# Escalate to Tier 2 — refine complex logic
+# Route: qwen3-coder:480b-cloud
+# "Design confidence scoring algorithm with weighted signals"
+
+# Review with Tier 1
+code-review ~/projects/synaptiq
 ```
 
 ## 🛠️ Configuration
 
-### Model Preferences
+### 3-Tier Model Routing (Mandatory)
+
+All tasks follow a strict escalation path: **Tier 1 → Tier 2 → Tier 3**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   3-TIER MODEL ROUTING                          │
+├──────────┬──────────────────────────┬──────────────────────────┤
+│  TIER 1  │  Qwen 2.5 Coder 7B      │  DEFAULT — all tasks     │
+│  (Local) │  localhost:11434          │  code, docs, scripts,    │
+│          │                          │  configs, schemas, Q&A   │
+├──────────┼──────────────────────────┼──────────────────────────┤
+│  TIER 2  │  Qwen 3 Coder 480B      │  ESCALATION — complex    │
+│  (Cloud) │  localhost:11434          │  multi-file builds,      │
+│          │                          │  architecture, advanced  │
+│          │                          │  logic, signal extraction│
+├──────────┼──────────────────────────┼──────────────────────────┤
+│  TIER 3  │  Claude Opus / Sonnet    │  LAST RESORT — only      │
+│  (Cloud) │  Anthropic API           │  when Tier 2 fails,      │
+│          │                          │  requires user approval  │
+└──────────┴──────────────────────────┴──────────────────────────┘
+```
 
 Edit: `~/Claude-Ollama/config/models.conf`
 
 ```bash
-# Default Claude model
-DEFAULT_CLAUDE_MODEL="claude-sonnet-4-5-20250929"
-
-# Default Ollama model
-DEFAULT_OLLAMA_MODEL="qwen2.5-coder:7b"
+# 3-Tier Routing
+TIER1_MODEL="qwen2.5-coder:7b"          # Default — local, fast
+TIER2_MODEL="qwen3-coder:480b-cloud"    # Escalation — cloud, powerful
+TIER3_MODEL="claude-sonnet-4-5-20250929" # Last resort — user approval required
 ```
 
 ### System Settings
@@ -275,15 +294,16 @@ See: `~/Claude-Ollama/mcp-servers/README.md` for details
 
 ### Credentials
 - User: `dsr-ai-lab`
-- Password: Stored in `~/Claude-Ollama/config/settings.conf`
+- No plaintext passwords in config files — use macOS Keychain or env vars
 - Keep config files secure (chmod 600)
 
 ### Best Practices
-1. Use local Ollama models for sensitive code
-2. Use Claude Code for non-sensitive tasks
-3. Review generated code before execution
-4. Keep logs for audit trail
-5. Never commit credentials to version control
+1. Use Tier 1 (Qwen 7B local) for sensitive/private code — never leaves your machine
+2. Tier 2 (Qwen 480B cloud) — review what you send, it's cloud-routed
+3. Tier 3 (Claude) — only with approval, for non-sensitive tasks
+4. Review generated code before execution
+5. Keep logs for audit trail
+6. Never commit credentials to version control
 
 ## 🔍 System Requirements
 
@@ -300,7 +320,8 @@ See: `~/Claude-Ollama/mcp-servers/README.md` for details
 - Ollama with models (pre-installed)
 
 ### Pre-installed Ollama Models
-- qwen2.5-coder:7b
+- qwen2.5-coder:7b (Tier 1 — default)
+- qwen3-coder:480b-cloud (Tier 2 — escalation)
 - llama3.1:8b
 - phi3.5
 - gemma2:2b
@@ -371,24 +392,26 @@ co-help
 
 ## 🎓 Tips & Best Practices
 
-### Model Selection Guide
+### Model Selection Guide (3-Tier Routing)
 
-| Task Type | Recommended Model | Reason |
-|-----------|------------------|---------|
-| Complex architecture | Claude Opus 4.5 | Best reasoning |
-| Code review | Claude Sonnet 4.5 | Balanced |
-| Quick questions | Claude Haiku 4.5 | Fastest |
-| Coding tasks | Qwen 2.5 Coder | Optimized for code |
-| General offline | Llama 3.1 | Good all-around |
-| Resource constrained | Phi 3.5 or Gemma | Lightweight |
+| Task Type | Tier | Model | Reason |
+|-----------|------|-------|--------|
+| Quick code gen, scripts | **Tier 1** | Qwen 2.5 Coder 7B | Fast, local, free |
+| Configs, schemas, docs | **Tier 1** | Qwen 2.5 Coder 7B | Handles easily |
+| Git, DevOps, templates | **Tier 1** | Qwen 2.5 Coder 7B | Standard tasks |
+| Multi-file module builds | **Tier 2** | Qwen 3 Coder 480B | Complex reasoning |
+| Architecture decisions | **Tier 2** | Qwen 3 Coder 480B | Advanced logic |
+| Signal extraction, ML logic | **Tier 2** | Qwen 3 Coder 480B | Deep understanding |
+| Qwen 480B can't handle it | **Tier 3** | Claude Opus/Sonnet | Last resort, user approval |
+| Offline / air-gapped | — | Llama 3.1 / Phi 3.5 | No network needed |
 
-### Optimization Tips
+### Optimization Tips (Qwen-First Workflow)
 
-1. **Start with planning** (Claude Opus)
-2. **Implement locally** (Qwen Coder)
-3. **Review with Claude** (Sonnet)
-4. **Document with Claude** (Sonnet)
-5. **Test locally** (native tools)
+1. **Always start with Tier 1** (Qwen 7B) — code, plan, scaffold
+2. **Escalate to Tier 2** (Qwen 480B) — only if 7B output is insufficient
+3. **Tier 3 is rare** (Claude) — only with explicit user approval
+4. **Review locally** — use Qwen for code review before pushing
+5. **Test locally** (native tools — pytest, npm test, etc.)
 
 ### Prompting Best Practices
 
@@ -448,6 +471,7 @@ And start building with the power of Claude Code + Ollama! 🚀
 
 ---
 
-**Version**: 1.0.0  
-**Date**: February 2026  
+**Version**: 1.1.0
+**Date**: February 2026
 **Status**: Production Ready
+**Routing**: 3-Tier (Qwen 7B → Qwen 480B → Claude)
