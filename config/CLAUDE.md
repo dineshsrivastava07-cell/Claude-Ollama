@@ -30,11 +30,17 @@ jq, yq, curl, wget, git, gh, ripgrep, fd, fzf, bat, uv
 - Remove passwords/secrets from config files — never store plaintext credentials
 - Keep responses concise
 
-## Model Routing (HARD MANDATE — NON-NEGOTIABLE, EVERY session, EVERY task/project/code/script, 4-tier)
-> **STRONG MANDATE**: 4-tier routing is ALWAYS active from session startup. No exceptions. Never skip tiers. Never use Claude to generate code without explicit user approval.
+## PERMANENT MANDATE — 4-Tier Model Routing (ALL projects, ALL sessions, NOW and FUTURE)
 
-### Startup Rule
-- On every Claude CLI session start → default to Qwen 7B (Tier 1) immediately for all work.
+> THIS IS A STRONG, PERMANENT, NON-NEGOTIABLE MANDATE.
+> Active from the very first moment of EVERY Claude CLI session.
+> Applies to EVERY project, EVERY task, EVERY piece of code, script, config, doc, or operation.
+> No exceptions. No shortcuts. No skipping tiers. EVER.
+
+### RULE 1 — CLI STARTUP: Always start with Qwen 7B (T1)
+On every Claude CLI session start → begin immediately with Qwen 7B (Tier 1).
+
+### RULE 2 — STRICT ESCALATION: T1 → T2 → T3 → T4 (never skip)
 
 ### Tier Definitions
 
