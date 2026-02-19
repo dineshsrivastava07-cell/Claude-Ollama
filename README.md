@@ -6,11 +6,15 @@ Complete automation framework for Mac Mini (dsr-ai-lab) that integrates Claude C
 
 ## ✨ Features
 
-### 🤖 3-Tier AI Routing System
-- **Tier 1 — Qwen 2.5 Coder 7B** (Local): Default for all tasks — fast, free, private
-- **Tier 2 — Qwen 3 Coder 480B** (Cloud via Ollama): Escalation for complex tasks — near Opus-level reasoning
-- **Tier 3 — Claude Opus/Sonnet** (Cloud): Last resort — only with explicit user approval
+### 🤖 4-Tier AI Routing System (Hard Mandate)
+- **Tier 1 — Qwen 2.5 Coder 7B** (Local, Ollama): Startup default — all code, docs, scripts, configs
+- **Tier 2 — Qwen 3 Coder 480B** (Cloud, Ollama): Complex multi-file builds, architecture, advanced logic
+- **Tier 3 — Gemini** (Google account OAuth, no API key): Long context, multimodal, complex reasoning
+  - Models: `gemini-2.0-flash` → `gemini-2.5-pro` → `gemini-3-flash-preview` → `gemini-3-pro-preview`
+  - Aliases: `gem`, `gem-25`, `gem3`, `gem3-pro`
+- **Tier 4 — Claude Opus/Sonnet** (Cloud): Absolute last resort — only with explicit user approval
 - **Also available** (Local): Llama 3.1, Phi 3.5, Gemma, Mistral
+- **Escalation**: T1 → T2 → T3 → T4 (never skip tiers)
 
 ### 🚀 Automation Capabilities
 - **Code Review**: Automated comprehensive code analysis

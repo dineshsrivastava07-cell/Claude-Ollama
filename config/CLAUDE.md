@@ -30,25 +30,47 @@ jq, yq, curl, wget, git, gh, ripgrep, fd, fzf, bat, uv
 - Remove passwords/secrets from config files — never store plaintext credentials
 - Keep responses concise
 
-## Model Routing (MANDATORY — ALWAYS ACTIVE, EVERY session, EVERY task/project/code/script, 3-tier)
-> **NON-NEGOTIABLE**: This 3-tier routing applies to ALL work — any task, programme, project, code, script, config, doc, or operation. No exceptions.
-- **TIER 1 — DEFAULT: Qwen 2.5 Coder 7B (local)** via Ollama API (localhost:11434)
-  - Route aggressively — code gen, docs, scripts, file ops, git, DevOps, Q&A, templates, schemas, configs, build plans, scope docs
+## Model Routing (HARD MANDATE — NON-NEGOTIABLE, EVERY session, EVERY task/project/code/script, 4-tier)
+> **STRONG MANDATE**: 4-tier routing is ALWAYS active from session startup. No exceptions. Never skip tiers. Never use Claude to generate code without explicit user approval.
+
+### Startup Rule
+- On every Claude CLI session start → default to Qwen 7B (Tier 1) immediately for all work.
+
+### Tier Definitions
+
+- **TIER 1 — DEFAULT: Qwen 2.5 Coder 7B (local, qwen2.5-coder:7b)** via Ollama API (localhost:11434)
+  - Route aggressively — ALL code gen, docs, scripts, file ops, git, DevOps, Q&A, templates, schemas, configs, build plans, scope docs
   - Fast, free, local — use for everything that fits
   - `curl -s http://localhost:11434/api/generate -d '{"model":"qwen2.5-coder:7b","prompt":"...","stream":false}' | jq -r '.response'`
-- **TIER 2 — ESCALATION: Qwen 3 Coder 480B (cloud)** via Ollama API (localhost:11434)
-  - Use for complex tasks: multi-file module builds, architecture decisions, advanced logic, signal extraction
-  - Escalate here BEFORE going to Claude
+
+- **TIER 2 — ESCALATION: Qwen 3 Coder 480B (cloud, qwen3-coder:480b-cloud)** via Ollama API (localhost:11434)
+  - Complex tasks: multi-file builds, architecture, advanced logic, E2E analysis
+  - Escalate here BEFORE Gemini or Claude
   - `curl -s http://localhost:11434/api/generate -d '{"model":"qwen3-coder:480b-cloud","prompt":"...","stream":false}' | jq -r '.response'`
-- **TIER 3 — LAST RESORT: Claude (Opus/Sonnet)**
-  - ONLY when Qwen 480B can't handle it — ONLY with user approval
-- **For longer outputs**: Use streaming or break into multiple Qwen calls
-- **Always try Qwen first** — escalate Tier 1 → Tier 2 → Tier 3
-- **Git commit attribution**:
-  - Qwen 7B did the work → `Co-Authored-By: Qwen 2.5 Coder <ollama@local>`
-  - Qwen 480B did the work → `Co-Authored-By: Qwen 3 Coder <ollama@cloud>`
-  - Claude did the work → `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>`
-  - Multiple contributed → list all that contributed
+
+- **TIER 3 — Gemini (dineshsrivastava07@gmail.com, Google account OAuth — no API key)**
+  - Use when Qwen 480B cannot handle it: long context, multimodal, complex reasoning, agent tasks
+  - Auth: Google OAuth via Gemini CLI (token cached — no login needed after first browser auth)
+  - Models:
+    - `gemini-2.0-flash`       — fast, everyday tasks       → alias: `gem-flash`
+    - `gemini-2.5-pro`         — advanced reasoning          → alias: `gem-25`
+    - `gemini-3-flash-preview` — Gemini 3, fast + capable   → alias: `gem3`
+    - `gemini-3-pro-preview`   — most capable, 1M ctx       → alias: `gem3-pro`
+  - Headless call: `GOOGLE_GENAI_USE_GCA=true gemini -p "PROMPT" --model gemini-3-pro-preview`
+
+- **TIER 4 — LAST RESORT: Claude (Opus/Sonnet)**
+  - ONLY when Qwen 480B AND Gemini cannot handle it
+  - ONLY with explicit user approval BEFORE using — always ask first, never assume
+
+### Escalation Path
+T1 (Qwen 7B) → T2 (Qwen 480B) → T3 (Gemini) → T4 (Claude) — NEVER skip tiers
+
+### Git Commit Attribution
+- Qwen 7B   → `Co-Authored-By: Qwen 2.5 Coder <ollama@local>`
+- Qwen 480B → `Co-Authored-By: Qwen 3 Coder <ollama@cloud>`
+- Gemini    → `Co-Authored-By: Gemini <gemini@google>`
+- Claude    → `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>`
+- Multiple contributors → list all
 
 ## Security
 - Never store plaintext passwords in scripts or config files
