@@ -1,0 +1,61 @@
+litellm_settings:
+  drop_params: true
+  set_verbose: false
+
+router_settings:
+  routing_strategy: least-busy
+  num_retries: 2
+  retry_after: 5
+  fallbacks:
+    - claude-3-5-sonnet-20241022:
+        - qwen-480b
+    - qwen-480b:
+        - gemini-fallback
+
+model_list:
+  # TIER 1 — Default: Qwen 2.5 Coder 7B (maps all small/fast claude requests)
+  - model_name: claude-haiku-4-5-20251001
+    litellm_params:
+      model: ollama/qwen2.5-coder:7b
+      api_base: http://localhost:11434
+      stream: false
+
+  - model_name: claude-3-haiku-20240307
+    litellm_params:
+      model: ollama/qwen2.5-coder:7b
+      api_base: http://localhost:11434
+      stream: false
+
+  # TIER 2 — Escalation: Qwen 3 Coder 480B (maps all heavy claude requests)
+  - model_name: claude-3-5-sonnet-20241022
+    litellm_params:
+      model: ollama/qwen3-coder:480b-cloud
+      api_base: http://localhost:11434
+      stream: false
+
+  - model_name: claude-sonnet-4-6
+    litellm_params:
+      model: ollama/qwen3-coder:480b-cloud
+      api_base: http://localhost:11434
+      stream: false
+
+  # TIER 3 — Gemini via CLI Bridge on port 4001
+  - model_name: claude-opus-4-6
+    litellm_params:
+      model: openai/gemini-proxy
+      api_base: http://localhost:4001
+      api_key: gemini-bridge-local
+      stream: false
+
+  - model_name: gemini-bridge
+    litellm_params:
+      model: openai/gemini-proxy
+      api_base: http://localhost:4001
+      api_key: gemini-bridge-local
+      stream: false
+
+  # TIER 4 — Real Claude (only if proxy explicitly called with real key)
+  - model_name: claude-real-fallback
+    litellm_params:
+      model: anthropic/claude-sonnet-4-6
+      api_key: os.environ/REAL_ANTHROPIC_KEY
