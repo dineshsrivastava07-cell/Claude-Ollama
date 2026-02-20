@@ -39,36 +39,101 @@ jq, yq, curl, wget, git, gh, ripgrep, fd, fzf, bat, uv
 
 ### RULE 1 — CLI STARTUP: Always start with Qwen 7B (T1)
 On every Claude CLI session start → begin immediately with Qwen 7B (Tier 1).
+Do NOT use any other model until Tier 1 is attempted and confirmed insufficient.
 
-### RULE 2 — STRICT ESCALATION: T1 → T2 → T3 → T4 (never skip)
+### RULE 2 — STRICT ESCALATION (never skip tiers)
+```
+T1: Qwen 7B  →  T2: Qwen 480B  →  T3: Gemini  →  T4: Claude
+```
+NEVER jump T1→T3, NEVER jump T1→T4, NEVER jump T2→T4. Always in order.
+
+### RULE 3 — TIER 4 CLAUDE: EXPLICIT USER APPROVAL REQUIRED EVERY TIME
+Claude is the absolute last resort. ONLY after BOTH Qwen 480B (T2) AND Gemini (T3) are tried and fail.
+ALWAYS ask user: "T2 Qwen 480B and T3 Gemini cannot handle this — do you approve using T4 Claude?"
+NEVER self-approve. NEVER assume approval. Wait for explicit confirmation.
+
+### Implementation — LiteLLM Proxy Architecture
+
+All 4-tier routing is implemented via a **LiteLLM proxy** that transparently intercepts Claude API calls.
+
+**Infrastructure:**
+- **LiteLLM Proxy**: `localhost:4000` — intercepts all Anthropic API requests
+- **Gemini CLI Bridge**: `localhost:4001` — translates API format → Gemini CLI (OAuth)
+- **Ollama**: `localhost:11434` — serves T1 and T2 models locally
+- **Config**: `~/Claude-Ollama/litellm-proxy/config.yaml`
+- **Launch (full 4-tier)**: `~/Claude-Ollama/litellm-proxy/claude-local.sh`
+
+**Environment (set by claude-local.sh):**
+```bash
+export ANTHROPIC_BASE_URL=http://localhost:4000
+export ANTHROPIC_API_KEY=local-4tier-routing-active
+```
+
+**Model Mapping (LiteLLM config.yaml):**
+
+| Claude Model Requested | Routed To | Tier |
+|---|---|---|
+| `claude-haiku-4-5-20251001` | `ollama/qwen2.5-coder:7b` (:11434) | T1 |
+| `claude-3-haiku-20240307` | `ollama/qwen2.5-coder:7b` (:11434) | T1 |
+| `claude-3-5-sonnet-20241022` | `ollama/qwen3-coder:480b-cloud` (:11434) | T2 |
+| `claude-sonnet-4-6` | `ollama/qwen3-coder:480b-cloud` (:11434) | T2 |
+| `claude-opus-4-6` | `openai/gemini-proxy` (:4001 bridge) | T3 |
+| `gemini-bridge` | `openai/gemini-proxy` (:4001 bridge) | T3 |
+| `claude-real-fallback` | `anthropic/claude-sonnet-4-6` (real) | T4 |
+
+**Fallback chain (router_settings):**
+```
+claude-3-5-sonnet → qwen-480b → gemini-fallback
+```
 
 ### Tier Definitions
 
-- **TIER 1 — DEFAULT: Qwen 2.5 Coder 7B (local, qwen2.5-coder:7b)** via Ollama API (localhost:11434)
-  - Route aggressively — ALL code gen, docs, scripts, file ops, git, DevOps, Q&A, templates, schemas, configs, build plans, scope docs
-  - Fast, free, local — use for everything that fits
-  - `curl -s http://localhost:11434/api/generate -d '{"model":"qwen2.5-coder:7b","prompt":"...","stream":false}' | jq -r '.response'`
+- **TIER 1 — DEFAULT: Qwen 2.5 Coder 7B (local)**
+  - ALL code gen, docs, scripts, file ops, git, DevOps, Q&A, schemas, configs, build plans
+  - Fast, free, private — route everything here first
+  - Direct: `curl -s http://localhost:11434/api/generate -d '{"model":"qwen2.5-coder:7b","prompt":"...","stream":false}' | jq -r '.response'`
+  - Via proxy: any haiku model name → auto-routed
 
-- **TIER 2 — ESCALATION: Qwen 3 Coder 480B (cloud, qwen3-coder:480b-cloud)** via Ollama API (localhost:11434)
-  - Complex tasks: multi-file builds, architecture, advanced logic, E2E analysis
-  - Escalate here BEFORE Gemini or Claude
-  - `curl -s http://localhost:11434/api/generate -d '{"model":"qwen3-coder:480b-cloud","prompt":"...","stream":false}' | jq -r '.response'`
+- **TIER 2 — ESCALATION: Qwen 3 Coder 480B (cloud)**
+  - Complex multi-file builds, architecture decisions, advanced logic, E2E analysis
+  - Direct: `curl -s http://localhost:11434/api/generate -d '{"model":"qwen3-coder:480b-cloud","prompt":"...","stream":false}' | jq -r '.response'`
+  - Via proxy: sonnet model names → auto-routed
 
-- **TIER 3 — Gemini (dineshsrivastava07@gmail.com, Google account OAuth — no API key)**
-  - Use when Qwen 480B cannot handle it: long context, multimodal, complex reasoning, agent tasks
-  - Auth: Google OAuth via Gemini CLI (token cached — no login needed after first browser auth)
-  - Models:
-    - `gemini-2.0-flash`       — fast, everyday tasks       → alias: `gem-flash`
-    - `gemini-2.5-pro`         — advanced reasoning          → alias: `gem-25`
-    - `gemini-3-flash-preview` — Gemini 3, fast + capable   → alias: `gem3`
-    - `gemini-3-pro-preview`   — most capable, 1M ctx       → alias: `gem3-pro`
-  - Headless call: `GOOGLE_GENAI_USE_GCA=true gemini -p "PROMPT" --model gemini-3-pro-preview`
+- **TIER 3 — Gemini CLI Bridge (port 4001)**
+  - When Qwen 480B cannot handle: very long context, multimodal, complex reasoning, agent tasks
+  - Auth: `GOOGLE_GENAI_USE_GCA=true` — Google OAuth (dineshsrivastava07@gmail.com), no API key
+  - Bridge (`gemini_bridge.py`) accepts Anthropic + OpenAI format, routes internally to:
+    - `gemini-2.0-flash` — fast tasks → alias: `gem-flash "prompt"`
+    - `gemini-2.5-pro` — advanced reasoning → alias: `gem-25 "prompt"`
+    - `gemini-3-flash-preview` — Gemini 3, fast → alias: `gem3 "prompt"`
+    - `gemini-3-pro-preview` — most capable, 1M ctx → alias: `gem3-pro "prompt"`
+  - Bridge selects model based on `opus`/`sonnet`/`max_tokens` signals in request
+  - Direct headless: `GOOGLE_GENAI_USE_GCA=true gemini -p "PROMPT" --model gemini-3-pro-preview`
+  - Via proxy: `claude-opus-4-6` model name → auto-routed to bridge → Gemini
 
-- **TIER 4 — LAST RESORT: Claude (Opus/Sonnet)**
-  - ONLY when Qwen 480B AND Gemini cannot handle it
-  - ONLY with explicit user approval BEFORE using — always ask first, never assume
+- **TIER 4 — ABSOLUTE LAST RESORT: Claude (Opus/Sonnet) — USER APPROVAL REQUIRED**
+  - ONLY when T2 Qwen 480B AND T3 Gemini both cannot handle the task
+  - Requires env var `REAL_ANTHROPIC_KEY` to be set
+  - Model name: `claude-real-fallback` in proxy config
+  - ALWAYS request explicit user approval before proceeding — never assume
 
-### Escalation Path
+### Management Scripts
+```bash
+~/Claude-Ollama/litellm-proxy/claude-local.sh       # Launch Claude Code with full 4-tier routing
+~/Claude-Ollama/litellm-proxy/start-proxy.sh         # Start LiteLLM proxy only (port 4000)
+~/Claude-Ollama/litellm-proxy/start-gemini-bridge.sh # Start Gemini bridge only (port 4001)
+~/Claude-Ollama/litellm-proxy/stop-proxy.sh          # Stop LiteLLM proxy
+~/Claude-Ollama/litellm-proxy/stop-gemini-bridge.sh  # Stop Gemini bridge
+```
+
+### Health Checks
+```bash
+curl -s http://localhost:4000/health    # LiteLLM proxy
+curl -s http://localhost:4001/health    # Gemini CLI bridge
+curl -s http://localhost:11434/api/tags # Ollama models
+```
+
+### Escalation Path (PERMANENT — all projects, now and future)
 T1 (Qwen 7B) → T2 (Qwen 480B) → T3 (Gemini) → T4 (Claude) — NEVER skip tiers
 
 ### Git Commit Attribution
@@ -76,7 +141,7 @@ T1 (Qwen 7B) → T2 (Qwen 480B) → T3 (Gemini) → T4 (Claude) — NEVER skip t
 - Qwen 480B → `Co-Authored-By: Qwen 3 Coder <ollama@cloud>`
 - Gemini    → `Co-Authored-By: Gemini <gemini@google>`
 - Claude    → `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>`
-- Multiple contributors → list all
+- Multiple contributors → list all that contributed
 
 ## Security
 - Never store plaintext passwords in scripts or config files
